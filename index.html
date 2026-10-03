@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<title>مشتری‌ها</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1b2a35;--paper:#f2f4f6;--card:#fff;--line:#d9e0e6;--acc:#0f766e;--mut:#5d6e7b}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:Vazirmatn,Tahoma,sans-serif;background:var(--paper);color:var(--ink);display:flex;flex-direction:column;font-size:15px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:var(--ink);color:#fff}
+header b{font-weight:800;font-size:17px}
+nav{display:flex;gap:4px}
+nav button{font:inherit;border:0;background:transparent;color:#b9c6d0;padding:6px 12px;border-radius:8px;cursor:pointer}
+nav button.on{background:var(--acc);color:#fff}
+nav i{font-style:normal;background:#fff;color:var(--ink);border-radius:9px;padding:0 6px;margin-right:4px;font-size:12px}
+nav i:empty{display:none}
+main{flex:1;position:relative;min-height:0}
+#map{position:absolute;inset:0;direction:ltr}
+#list{position:absolute;inset:0;overflow:auto;padding:12px 12px 90px;background:var(--paper)}
+#q{width:100%;font:inherit;padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:10px}
+.it{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:8px;cursor:pointer}
+.it>div{flex:1;min-width:0}
+.it b{display:block;font-weight:600}
+.it small{display:block;color:var(--mut)}
+.it em{font-style:normal;font-size:13px;color:var(--mut)}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.empty{color:var(--mut);text-align:center;padding:30px 10px}
+.tools{display:flex;gap:8px;margin-top:16px}
+.btn,.tools button,#sheet button,.acts a{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:9px;cursor:pointer;text-decoration:none;display:inline-block}
+#add{position:fixed;z-index:1200;left:16px;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--acc);color:#fff;border:0;font:inherit;font-weight:600;padding:14px 20px;border-radius:28px;box-shadow:0 3px 12px rgba(0,0,0,.25);cursor:pointer}
+#banner{position:fixed;z-index:1300;top:60px;left:12px;right:12px;background:var(--ink);color:#fff;padding:10px 14px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+#banner button{font:inherit;background:#fff;border:0;border-radius:8px;padding:5px 12px;cursor:pointer}
+#sheet{position:fixed;inset:0;z-index:2000;background:rgba(15,25,32,.55);display:flex;align-items:flex-end;justify-content:center}
+#sheet[hidden],#banner[hidden],#list[hidden]{display:none}
+#sb{background:var(--card);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom,0px))}
+#sb h2{margin:0 0 10px;font-size:19px}
+#sb label{display:block;color:var(--mut);font-size:13px;margin-top:10px}
+#sb input,#sb select,#sb textarea{display:block;width:100%;font:inherit;color:var(--ink);padding:10px;border:1px solid var(--line);border-radius:9px;margin-top:4px;background:#fff}
+.acts{display:flex;gap:8px;margin-bottom:6px}
+.acts a{background:var(--acc);color:#fff;border-color:var(--acc)}
+.loc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+.loc span{flex:1 1 100%;font-size:13px;color:var(--mut)}
+#sb h3{margin:18px 0 6px;font-size:15px}
+.or{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.or span:first-child{flex:1}
+.or button{padding:3px 10px}
+.add{display:grid;grid-template-columns:2fr 1fr 1.4fr;gap:6px;margin-top:8px}
+.add input{margin:0!important}
+.tot{margin-top:8px;font-weight:600}
+.foot{display:flex;gap:8px;margin-top:18px}
+.foot .pri{background:var(--acc);color:#fff;border-color:var(--acc);flex:1;font-weight:600}
+.foot .del{color:#b91c1c;margin-right:auto}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+  <b>مشتری‌ها</b>
+  <nav>
+    <button data-t="map" class="on">نقشه</button>
+    <button data-t="list">لیست</button>
+    <button data-t="today">امروز<i id="tc"></i></button>
+  </nav>
+</header>
+<main>
+  <div id="map"></div>
+  <section id="list" hidden>
+    <input id="q" type="search" placeholder="جستجوی نام یا تلفن">
+    <div id="items"></div>
+    <div class="tools">
+      <button id="exp">گرفتن بکاپ</button>
+      <label class="btn">بازگردانی بکاپ<input type="file" id="imp" accept=".json" hidden></label>
+    </div>
+  </section>
+</main>
+<button id="add">+ مشتری جدید</button>
+<div id="banner" hidden><span>روی نقشه ضربه بزن تا موقعیت مشتری ثبت شود.</span><button id="bc">انصراف</button></div>
+<div id="sheet" hidden><div id="sb"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $=s=>document.querySelector(s),fa=n=>(+n||0).toLocaleString('fa-IR');
+const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const ST={new:['جدید','#2563eb'],talk:['در حال مذاکره','#b45309'],buyer:['خریدار','#15803d'],cold:['سرد‌شده','#6b7280']};
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const fd=d=>d?new Date(d).toLocaleDateString('fa-IR'):'—';
+const tot=c=>c.orders.reduce((s,o)=>s+o.q*o.p,0);
+let db=[],tab='map',draft=null,isNew=false,pick=false;
+try{db=JSON.parse(localStorage.getItem('crm1')||'[]')}catch(e){}
+const save=()=>{try{localStorage.setItem('crm1',JSON.stringify(db))}catch(e){alert('ذخیره‌سازی در مرورگر ممکن نیست؛ بکاپ بگیر.')}};
+
+const map=L.map('map').setView([34.64,50.88],12);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+const layer=L.layerGroup().addTo(map);
+
+function render(){
+  layer.clearLayers();
+  db.forEach(c=>{if(c.lat==null)return;
+    L.circleMarker([c.lat,c.lng],{radius:11,color:'#fff',weight:2,fillColor:ST[c.st][1],fillOpacity:1})
+      .addTo(layer).on('click',()=>openC(c.id)).bindTooltip(esc(c.name),{direction:'top'});});
+  const t=today(),due=db.filter(c=>c.fu&&c.fu<=t);
+  $('#tc').textContent=due.length?fa(due.length):'';
+  const q=$('#q').value.trim();
+  let rows=tab==='today'?due:db;
+  if(q)rows=rows.filter(c=>(c.name+c.ph).includes(q));
+  rows=[...rows].sort((a,b)=>(a.fu||'9')>(b.fu||'9')?1:-1);
+  $('#items').innerHTML=rows.map(c=>`<div class="it" data-id="${c.id}"><span class="dot" style="background:${ST[c.st][1]}"></span><div><b>${esc(c.name)}</b><small>${esc(c.ph)}</small><small>${ST[c.st][0]}</small></div><em>${c.fu?'پیگیری: '+fd(c.fu):''}</em></div>`).join('')
+    ||`<p class="empty">${tab==='today'?'برای امروز پیگیری‌ای نیست.':'هنوز مشتری‌ای ثبت نشده. با دکمه‌ی «مشتری جدید» اولی را اضافه کن.'}</p>`;
+}
+function setTab(t){
+  tab=t;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  $('#list').hidden=t==='map';
+  if(t==='map')setTimeout(()=>map.invalidateSize(),50);
+  render();
+}
+function openC(id){draft=JSON.parse(JSON.stringify(db.find(c=>c.id==id)));isNew=false;sheet()}
+function newC(){draft={id:Date.now(),name:'',ph:'',ad:'',st:'new',fu:'',nt:'',lat:null,lng:null,orders:[]};isNew=true;sheet()}
+function readForm(){
+  draft.name=$('#fn').value.trim();draft.ph=$('#fp').value.trim();draft.ad=$('#fa').value.trim();
+  draft.st=$('#fs').value;draft.fu=$('#ff').value;draft.nt=$('#fnt').value;
+}
+function sheet(){
+  const c=draft;
+  $('#sheet').hidden=false;
+  $('#sb').innerHTML=`
+  <h2>${isNew?'مشتری جدید':esc(c.name)}</h2>
+  ${!isNew?`<div class="acts">${c.ph?`<a href="tel:${esc(c.ph)}">تماس</a>`:''}${c.lat!=null?`<a target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">مسیریابی</a>`:''}</div>`:''}
+  <label>نام<input id="fn" value="${esc(c.name)}"></label>
+  <label>تلفن<input id="fp" type="tel" inputmode="tel" value="${esc(c.ph)}"></label>
+  <label>آدرس<input id="fa" value="${esc(c.ad)}"></label>
+  <div class="loc"><span>${c.lat!=null?'موقعیت روی نقشه ثبت شده است.':'موقعیتی ثبت نشده؛ بدون آن، مشتری فقط در لیست دیده می‌شود.'}</span>
+    <button type="button" id="gps">موقعیت فعلی من</button><button type="button" id="pk">انتخاب روی نقشه</button></div>
+  <label>وضعیت<select id="fs">${Object.entries(ST).map(([k,v])=>`<option value="${k}" ${k===c.st?'selected':''}>${v[0]}</option>`).join('')}</select></label>
+  <label>پیگیری بعدی<input id="ff" type="date" value="${esc(c.fu)}"></label>
+  <label>یادداشت<textarea id="fnt" rows="2">${esc(c.nt)}</textarea></label>
+  <h3>سفارش‌ها</h3>
+  ${c.orders.map((o,i)=>`<div class="or"><span>${esc(o.i)}</span><span>${fa(o.q)} × ${fa(o.p)}</span><button type="button" data-d="${i}">حذف</button></div>`).join('')||'<small style="color:var(--mut)">سفارشی ثبت نشده.</small>'}
+  <div class="add"><input id="oi" placeholder="محصول"><input id="oq" type="number" inputmode="numeric" placeholder="تعداد"><input id="op" type="number" inputmode="numeric" placeholder="قیمت واحد"></div>
+  <button type="button" id="oa" style="margin-top:8px">افزودن سفارش</button>
+  <div class="tot">جمع سفارش‌ها: ${fa(tot(c))} تومان</div>
+  <div class="foot"><button type="button" class="pri" id="sv">ذخیره</button><button type="button" id="cl">بستن</button>${!isNew?'<button type="button" class="del" id="dl">حذف مشتری</button>':''}</div>`;
+}
+$('#sb').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.d!==undefined){readForm();draft.orders.splice(+b.dataset.d,1);sheet();return}
+  if(b.id==='oa'){
+    const i=$('#oi').value.trim(),q=+$('#oq').value,p=+$('#op').value;
+    if(!i||!q){alert('نام محصول و تعداد را وارد کن.');return}
+    readForm();draft.orders.push({i,q,p,d:today()});sheet();
+  }
+  if(b.id==='gps'){
+    readForm();
+    navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{draft.lat=p.coords.latitude;draft.lng=p.coords.longitude;sheet()},
+      ()=>alert('دسترسی به موقعیت داده نشد. اجازه‌ی مرورگر را بررسی کن یا روی نقشه انتخاب کن.'),{enableHighAccuracy:true})
+      :alert('این مرورگر موقعیت‌یابی ندارد.');
+  }
+  if(b.id==='pk'){readForm();$('#sheet').hidden=true;pick=true;$('#banner').hidden=false;setTab('map')}
+  if(b.id==='sv'){
+    readForm();
+    if(!draft.name){alert('نام مشتری را وارد کن.');return}
+    const i=db.findIndex(c=>c.id==draft.id);i<0?db.push(draft):db[i]=draft;
+    save();$('#sheet').hidden=true;render();
+  }
+  if(b.id==='cl')$('#sheet').hidden=true;
+  if(b.id==='dl'&&confirm('این مشتری و سفارش‌هایش حذف شود؟')){db=db.filter(c=>c.id!=draft.id);save();$('#sheet').hidden=true;render()}
+});
+$('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')$('#sheet').hidden=true});
+map.on('click',e=>{if(!pick)return;pick=false;$('#banner').hidden=true;draft.lat=e.latlng.lat;draft.lng=e.latlng.lng;sheet()});
+$('#bc').onclick=()=>{pick=false;$('#banner').hidden=true;sheet()};
+$('#add').onclick=newC;
+$('#items').onclick=e=>{const r=e.target.closest('.it');if(r)openC(r.dataset.id)};
+$('#q').oninput=render;
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>setTab(b.dataset.t));
+$('#exp').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db)],{type:'application/json'}));a.download='customers-'+today()+'.json';a.click()};
+$('#imp').onchange=e=>{
+  const f=e.target.files[0];if(!f||!confirm('اطلاعات فعلی با بکاپ جایگزین شود؟'))return;
+  f.text().then(t=>{const d=JSON.parse(t);if(!Array.isArray(d))throw 0;db=d;save();render()}).catch(()=>alert('فایل بکاپ معتبر نیست.'));
+  e.target.value='';
+};
+render();
+const pts=db.filter(c=>c.lat!=null).map(c=>[c.lat,c.lng]);
+if(pts.length)map.fitBounds(pts,{padding:[40,40],maxZoom:15});
+</script>
+</body>
+</html>
